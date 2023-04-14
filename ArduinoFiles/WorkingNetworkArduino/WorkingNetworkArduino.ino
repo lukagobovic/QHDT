@@ -168,7 +168,7 @@ void loop() {
         }
         lastSerialDataTime = currentMillis;
         Udp.beginPacket(computer,8888);
-        Udp.write(sentData,60);
+        Udp.write(sentData,20);
         Udp.endPacket();
       }
       else if(currentMillis - lastSerialDataTime >= 100){
