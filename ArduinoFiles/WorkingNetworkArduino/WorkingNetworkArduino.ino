@@ -157,15 +157,17 @@ void loop() {
 //Serial.println(receivedInt);
   
   // Serial.println(canID);
-   //Serial.println(computer);
+  //Serial.println(computer);
   unsigned long currentMillis = millis();
   
   if(currentMillis - previousMillis >= 500){
     previousMillis = currentMillis;
     if (Serial.available()) {
         for (int i = 0; i < sizeof(sentData); i++) {
-          sentData[i] = Serial.read(); // convert each byte to a char and store in the array
+          sentData[i] = Serial.read();
+          //Serial.print(sentData[i]); // convert each byte to a char and store in the array
         }
+        //Serial.println();
         lastSerialDataTime = currentMillis;
         Udp.beginPacket(computer,8888);
         Udp.write(sentData,20);
@@ -206,7 +208,7 @@ void loop() {
 
     //send a reply to the IP address and port that sent us the packet we received
     // Serial.println(Udp.remoteIP());
-    Udp.beginPacket(computer, localPort);
+    Udp.beginPacket(computer, 8888);
     Udp.write(ReplyBuffer);
     Udp.endPacket();
     delay(15);

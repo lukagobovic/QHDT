@@ -17,10 +17,10 @@ byte mediumSpeed[] = { 0x00, 0x00, 0x13, 0x88, 0x00, 0x00, 0x00, 0x00 };
 byte highSpeed[] = { 0x00, 0x00, 0x48, 0x5c, 0x00, 0x00, 0x00, 0x00 };
 byte tempdata[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
-int speedOfMotor;
-int stopLED = 29;
-int crawlLED = 31;
-int speedLED = 33;
+int speedOfMotor = 0;
+int stopLED = 23;
+int crawlLED = 22;
+int speedLED = 40;
 int realSpeed;
 boolean didItAlready = false;
 char cmd[2];
@@ -62,7 +62,7 @@ void setup(void) {
 
   while (!Serial) delay(10);  // wait for serial port to open!
 
-  fram.begin(0x50, &Wire);
+  fram.begin(0x50);
 
   pinMode(stopLED, OUTPUT);
   pinMode(crawlLED, OUTPUT);
@@ -161,6 +161,9 @@ void loop(void) {
     speedOfMotor = theState;
     speedSelect(theState);
   }
+  else{
+    speedSelect(speedOfMotor);    
+  }
 
   /* Display the floating point data */
 
@@ -190,11 +193,10 @@ void loop(void) {
   // dataList[dataListIndex++] = orientationData.orientation.x;
   uint8_t orientation1 = orientationData.orientation.x;
   dataList[dataListIndex++] = orientation1 >> 8;
-
   dataList[dataListIndex++] = orientation1 & 0xFF;
   if (addressIndex < 8192) {
     fram.write(addressIndex++, orientation1 >> 8);
-    // fram.write(addressIndex++, orientation1 & 0xFF);
+    fram.write(addressIndex++, orientation1 & 0xFF);
   }
   dataList[dataListIndex++] = (int)yPos >> 8;
   dataList[dataListIndex++] = (int)yPos & 0xFF;
