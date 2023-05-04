@@ -16,8 +16,10 @@ byte crawl[] = { 0x00, 0x00, 0x09, 0xc4, 0x00, 0x00, 0x00, 0x00 };
 byte mediumSpeed[] = { 0x00, 0x00, 0x13, 0x88, 0x00, 0x00, 0x00, 0x00 };
 byte highSpeed[] = { 0x00, 0x00, 0x48, 0x5c, 0x00, 0x00, 0x00, 0x00 };
 byte tempdata[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+byte current[] = { 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00 };
 
-int speedOfMotor = 0;
+
+int speedOfMotor;
 int stopLED = 23;
 int crawlLED = 22;
 int speedLED = 40;
@@ -75,12 +77,12 @@ void setup(void) {
 
 
   /* Initialise the sensor */
-  if (!bno.begin()) {
-    /* There was a problem detecting the BNO055 ... check your connections */
-    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while (1)
-      ;
-  }
+  // if (!bno.begin()) {
+  //   /* There was a problem detecting the BNO055 ... check your connections */
+  //   Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+  //   while (1)
+  //     ;
+  // }
 
   if (canInit(0, CAN_BPS_500K) == CAN_OK)
     Serial.print("CAN0 Initialized Successfully.\n\r");
@@ -137,7 +139,6 @@ void speedSelect(int speed) {
       digitalWrite(speedLED, HIGH);
       break;
   }
-  canTx(0, 0x0000036f, true, tempdata, 8);
 }
 
 void loop(void) {
@@ -161,9 +162,7 @@ void loop(void) {
     speedOfMotor = theState;
     speedSelect(theState);
   }
-  else{
-    speedSelect(speedOfMotor);    
-  }
+  canTx(0, 0x00000349, true, tempdata, 8);
 
   /* Display the floating point data */
 

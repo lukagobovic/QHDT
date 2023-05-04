@@ -13,7 +13,7 @@ int canID = 0;
 
 const IPAddress ip(192, 168, 1, 177);
 //const IPAddress server(192, 168, 8, 1);
-const IPAddress computer(192, 168, 1, 50);
+const IPAddress computer(192, 168, 1, 60);
 const unsigned int localPort = 8888;      // local port to listen on
 
 //byte spaceXPacket[PACKET_SIZE]; //packet to send spaceX
