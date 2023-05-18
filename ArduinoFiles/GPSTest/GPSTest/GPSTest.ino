@@ -7,6 +7,11 @@
 */
 static const int RXPin = 4, TXPin = 3;
 static const uint32_t GPSBaud = 9600;
+double START_LAT = 0.0;
+double START_LON = 0.0;
+double lat = 0.0;
+double lon = 0.0;
+bool firstTime = true;
 
 // The TinyGPSPlus object
 TinyGPSPlus gps;
@@ -16,9 +21,6 @@ SoftwareSerial ss(RXPin, TXPin);
 
 // For stats that happen every 5 seconds
 unsigned long last = 0UL;
-static long originLon = 0;
-static long originLat = 0;
-long lat, lon;
 
 void setup()
 {
@@ -31,15 +33,23 @@ void setup()
   Serial.println(F("by Mikal Hart"));
   Serial.println();
 
-  if(Serial3.available() > 0)
-    gps.encode(Serial3.read());
-
-  if (gps.location.isValid())
-  {
-    originLat = gps.location.lat();
-    originLon = gps.location.lng();
-  }
 }
+
+double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double earthRadius = 6371000; // in meters
+
+  double dLat = (lat2 - lat1) * M_PI / 180.0;
+  double dLon = (lon2 - lon1) * M_PI / 180.0;
+
+  double a = sin(dLat / 2) * sin(dLat / 2) +
+             cos(lat1 * M_PI / 180.0) * cos(lat2 * M_PI / 180.0) *
+             sin(dLon / 2) * sin(dLon / 2);
+  double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  double distance = earthRadius * c;
+
+  return distance;
+}
+
 
 void loop()
 {
@@ -47,25 +57,30 @@ void loop()
   while (Serial3.available() > 0)
     gps.encode(Serial3.read());
 
-  if (gps.speed.isUpdated())
-  {
-    Serial.print("SPEED: ");
-    Serial.print(gps.speed.kmph());
-    Serial.println(" km/h");
-    Serial.flush();
-    Serial.print(gps.speed.kmph());
-    Serial.print(",");
-    Serial.println();
-  }
-
+  // if (gps.speed.isUpdated())
+  // {
+  //   Serial.print("SPEED: ");
+  //   Serial.print(gps.speed.kmph());
+  //   Serial.println(" km/h");
+  //   Serial.flush();
+  //   Serial.print(gps.speed.kmph());
+  //   Serial.print(",");
+  //   Serial.println();
+  // }
+  
   if (gps.location.isValid())
   {
-    lat = gps.location.lat();
-    lon = gps.location.lng();
+    if(firstTime){
+      START_LAT = gps.location.lat();
+      START_LON = gps.location.lng();
+      firstTime = false;
+    }
+    double distance = calculateDistance(
+      START_LAT, START_LON,
+      gps.location.lat(), gps.location.lng()
+    );
+    Serial.println(distance);
   }
-  long distance = sqrt((lat - originLat) * (lat - originLat) + (lon - originLon) * (lon - originLon));
-  Serial.println(distance);
-  
 
   else if (millis() - last > 5000)
   {
@@ -109,4 +124,5 @@ void loop()
 
     last = millis();
   }
+  
 }
