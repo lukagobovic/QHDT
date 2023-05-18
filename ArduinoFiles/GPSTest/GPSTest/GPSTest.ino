@@ -16,6 +16,9 @@ SoftwareSerial ss(RXPin, TXPin);
 
 // For stats that happen every 5 seconds
 unsigned long last = 0UL;
+static long originLon = 0;
+static long originLat = 0;
+long lat, lon;
 
 void setup()
 {
@@ -27,6 +30,15 @@ void setup()
   Serial.print(F("Testing TinyGPSPlus library v. ")); Serial.println(TinyGPSPlus::libraryVersion());
   Serial.println(F("by Mikal Hart"));
   Serial.println();
+
+  if(Serial3.available() > 0)
+    gps.encode(Serial3.read());
+
+  if (gps.location.isValid())
+  {
+    originLat = gps.location.lat();
+    originLon = gps.location.lng();
+  }
 }
 
 void loop()
@@ -46,7 +58,14 @@ void loop()
     Serial.println();
   }
 
-
+  if (gps.location.isValid())
+  {
+    lat = gps.location.lat();
+    lon = gps.location.lng();
+  }
+  long distance = sqrt((lat - originLat) * (lat - originLat) + (lon - originLon) * (lon - originLon));
+  Serial.println(distance);
+  
 
   else if (millis() - last > 5000)
   {

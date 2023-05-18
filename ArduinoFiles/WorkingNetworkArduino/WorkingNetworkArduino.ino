@@ -35,14 +35,6 @@ const unsigned long SERIAL_TIMEOUT = 1000;
     FUNCTIONS
     -------------------------------------------------------------------------
 */
-void zeroPacket(byte *packet, int bytes)
-{
-  // sets all packets to zero
-  for (int i = 0; i < bytes; i++)
-  {
-    packet[i] = 0;
-  }
-}
 
 void sendUDP(byte *packet, int packetSize, IPAddress IP, int port)
 {
@@ -56,15 +48,6 @@ void sendUDP(byte *packet, int packetSize, IPAddress IP, int port)
   Serial.println(); // debugging
 
   Udp.endPacket();
-}
-
-void updatePacket(byte *packet, int packetSize, byte *updatePacket)
-{
-  // update the current packet with data from another packet
-  for (int i = 0; i < packetSize; i++)
-  {
-    packet[i] = updatePacket[i];
-  }
 }
 
 void establishInternal() {
@@ -154,7 +137,7 @@ void setup() {
 void loop() {
   int packetCheck = Udp.parsePacket();
   
-//Serial.println(receivedInt);
+  //Serial.println(receivedInt);
   
   // Serial.println(canID);
   //Serial.println(computer);
