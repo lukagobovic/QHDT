@@ -7,6 +7,8 @@
 #include "max6675.h"
 #include "constants.h"
 #include <TinyGPS++.h>
+#include <SPI.h>
+#include <SD.h>
 
 
 enum PodState {
@@ -64,10 +66,17 @@ uint32_t theID = 0;
 Adafruit_FRAM_I2C fram = Adafruit_FRAM_I2C();
 uint16_t addressIndex = 0;
 
+File dataFile;
+
 //GPS
 TinyGPSPlus gps;
 float speedKph = 0;
-
+double START_LAT = 0.0;
+double START_LON = 0.0;
+double lat = 0.0;
+double lon = 0.0;
+double distance = 0;
+bool firstTime = true;
 
 //Thermocouple Pins
 //Shared SPI
@@ -118,8 +127,7 @@ struct data373 ID373(CAN_FRAME frame) {
 }
 
 
-void
-speedSelect(int speed) {
+void speedSelect(int speed) {
   switch (speed) {
     case 0:
       Serial.println("off");
@@ -183,6 +191,21 @@ int readIsolationState(CAN_FRAME frameToSend) {
   }
 }
 
+double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double earthRadius = 6371000; // in meters
+
+  double dLat = (lat2 - lat1) * M_PI / 180.0;
+  double dLon = (lon2 - lon1) * M_PI / 180.0;
+
+  double a = sin(dLat / 2) * sin(dLat / 2) +
+             cos(lat1 * M_PI / 180.0) * cos(lat2 * M_PI / 180.0) *
+             sin(dLon / 2) * sin(dLon / 2);
+  double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  double distance = earthRadius * c;
+
+  return distance;
+}
+
 
 bool checkSerial() {}
 
@@ -196,7 +219,15 @@ void setup(void) {
 
   while (!Serial) delay(10);  // wait for serial port to open!
 
-  fram.begin(0x50);
+  //Init SD card with CS pin at 4
+  if (!SD.begin(4)) {
+    Serial.println("initialization failed!");
+    while (1);
+  }
+  dataFile = SD.open("test.txt", FILE_WRITE);
+  if (!myFile) {
+    Serial.println("error opening test.txt");
+  }
 
   pinMode(stopLED, OUTPUT);
   pinMode(crawlLED, OUTPUT);
@@ -235,10 +266,13 @@ void setup(void) {
   isoState = readIsolationState(IMD_Frame);  //Checks for ground faults
   if (isoState == 0)
     the_STATE = FAULT;
+    dataFile.println("Isolation State: Good");
   else if (isoState == 7)
     the_STATE = GROUNDWARNING;
+    dataFile.println("Isolation State: Warning");
   else
     the_STATE = STDBY;
+    dataFile.println("Isolation State: DANGER");
 
   bool SerialReady = false;
   //This is where we initialize, wait until the pod is mounted and everthing is ready
@@ -250,6 +284,7 @@ void setup(void) {
       //If data is recieved from network arduino indicating initialization state, continue with operation of pod
       if (dataIn == INIT) {
         SerialReady = true;
+        dataFile.println("POD Initialized");
       }
     }
   }
@@ -261,6 +296,7 @@ void setup(void) {
     if (buttonValue == LOW) {
       // If button pushed, pod is safe to approach
       the_STATE = SAFE_TO_APPROACH;
+      dataFile.println("POD Safe To Approach");
       //Delay just in case;
       delay(5000);
       PodMounted = true;
@@ -277,6 +313,7 @@ void setup(void) {
       Serial.println(theState);
       if (theState = READY_TO_LAUNCH) {
         RTL = true;
+        dataFile.println("POD Ready To Launch");
       }
     }
   }
@@ -332,10 +369,12 @@ void setup(void) {
     isoState = readIsolationState(IMD_Frame);  //Checks for ground faults
     if (isoState == 0)
       faultSTATE();
+      dataFile.println("Isolation State: DANGER");
     if (Serial3.available()) {
       int theState = Serial3.read() - '0'; 
       if (theState = -1) {
         faultSTATE();
+        dataFile.println("No Connection: FAULT");
       }
     }
     digitalWrite(YELLOWLED, LOW);
@@ -349,10 +388,28 @@ void setup(void) {
     }
     if (gps.location.isValid() && gps.speed.isValid()) {
       speedKph = gps.speed.kmph();
+      dataFile.print("Speed: ");
+      dataFile.println(speedKph);
+
 
     //Watch for distance and time since launch, and watch for speed
     //If speed is too high, the coast
     //Coast until reached max distance or  time since launch experied
+    if (gps.location.isValid())
+    {
+      if(firstTime){
+        START_LAT = gps.location.lat();
+        START_LON = gps.location.lng();
+        firstTime = false;
+      }
+      distance = calculateDistance(
+        START_LAT, START_LON,
+        gps.location.lat(), gps.location.lng()
+      );
+      Serial.println(distance);
+      dataFile.print("Distance: ");
+      dataFile.println(distance);
+    }
     if (speedKph >= LAUNCH_SPEED_THRESH) {
       inLaunch = true;
       the_STATE = COAST;
@@ -373,6 +430,25 @@ void setup(void) {
       if (theState = -1) {
         faultSTATE();
       }
+    }
+    while (Serial2.available() > 0)
+      gps.encode(Serial3.read());
+
+    if (gps.location.isValid() && gps.speed.isValid()) {
+      speedKph = gps.speed.kmph();
+      dataFile.print("Speed: ");
+      dataFile.println(speedKph);
+    }
+
+    if (gps.location.isValid())
+    {
+        distance = calculateDistance(
+        START_LAT, START_LON,
+        gps.location.lat(), gps.location.lng()
+      );
+      Serial.println(distance);
+      dataFile.print("Distance: ");
+      dataFile.println(distance);
     }
     if (the_STATE = COAST) {
       canTx(0, 0x00000349, true, crawl, 8);
